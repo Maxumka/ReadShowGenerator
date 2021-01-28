@@ -6,8 +6,6 @@ using TextRead;
 
 namespace Test
 {
-    [Read]
-    [Show]
     public class Tree
     {
         public string Name { get; set; }
@@ -24,23 +22,25 @@ namespace Test
         public string Name { get; set; }
 
         public int Age { get; set; }
+       
+        public Hobby PersonHobby { get; set; }
     }
+
+    public enum Hobby 
+    {
+        Music,
+        Games,
+    };
 
     public class Program
     {
         static void Main(string[] args)
-        {         
-            var treeStr = "Test.Tree { Name = березка, Age = 12, IsNormal = True}";
+        {
+            var personStr = "Test.Person { Name = Max, Age = 21, PersonHobby = Music }";
 
-            var tree = ReadTree.Read(treeStr);
+            var a = ReadPerson.Read(personStr);
 
-            Console.WriteLine(tree.Show());
-
-            var personStr = "Test.Person { Name = Max, Age = 12 }";
-
-            var person = ReadPerson.Read(personStr);
-
-            Console.WriteLine(person.Show());
+            Console.WriteLine(a.Show());
         }
     }
 }

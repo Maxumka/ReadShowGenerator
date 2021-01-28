@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Diagnostics;
 
 namespace DerivingReadShow
 {
@@ -77,10 +78,19 @@ namespace DerivingReadShow
 
                             var type = prop.Type
                                            .ToString();
-
+                            
                             codeBuilder.AppendLine($@"if(!dictProps.TryGetValue($""{name}"", out var prop{name})) return null;");
 
-                            if (type is "string")
+                            var propertySymbol = (IPropertySymbol)context.Compilation
+                                                                         .GetSemanticModel(nameSpace.SyntaxTree)
+                                                                         .GetDeclaredSymbol(prop);
+
+                            if (propertySymbol.Type.TypeKind == TypeKind.Enum)
+                            {
+                                codeBuilder.AppendLine($"if(!Enum.TryParse<{namespaceName}.{type}>(prop{name}, out var res{name})) return null;");
+                                codeBuilder.AppendLine($"instance.{name} = res{name};");                             
+                            }
+                            else if (type is "string")
                             {
                                 codeBuilder.AppendLine($"instance.{name} = prop{name};");
                             }
