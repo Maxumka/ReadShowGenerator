@@ -6,41 +6,67 @@ using TextRead;
 
 namespace Test
 {
-    public class Tree
+    [Show]
+    public abstract class Person
+    {
+        public string SecondName { get; set; }
+    }
+
+    [Show]
+    public abstract class Plant
     {
         public string Name { get; set; }
 
-        public int Age { get; set; }
-
-        public bool IsNormal { get; set; }
+        public bool IsTree { get; set; }
     }
 
     [Read]
     [Show]
-    public class Person
+    public sealed class Tree : Plant
     {
-        public string Name { get; set; }
-
         public int Age { get; set; }
-       
-        public Hobby PersonHobby { get; set; }
     }
 
-    public enum Hobby 
+    [Show]
+    public sealed class Shrub : Plant
     {
-        Music,
-        Games,
-    };
+        public Month MonthFlower { get; set; }
+    }
+
+    public sealed class Mushroom : Plant
+    {
+        public bool IsEdible { get; set; }
+    }
+
+    public enum Month
+    {
+        Janurary,
+        February,
+        March,
+        April,
+        May,
+        June,
+        Jule,
+        Augast,
+        September,
+        October,
+        November,
+        December
+    }
 
     public class Program
     {
         static void Main(string[] args)
         {
-            var personStr = "Test.Person { Name = Max, Age = 21, PersonHobby = Music }";
+            var treeIn = "Test.Tree {Name = bereza, Age = 12}";
 
-            var a = ReadPerson.Read(personStr);
+            var tree = ReadTree.Read(treeIn);
 
-            Console.WriteLine(a.Show());
+            var treeInst = new Tree { Name = "berezka", Age = 12, IsTree = true };
+
+            var shrunInst = new Shrub { Name = "kust", IsTree = false, MonthFlower = Month.April };
+
+            Console.WriteLine(shrunInst.Show());
         }
     }
 }

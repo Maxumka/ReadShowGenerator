@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,8 @@ namespace DerivingReadShow
                 nameAttribute = generator.NameAttribute;
             }
 
-            public List<(NamespaceDeclarationSyntax, IEnumerable<ClassDeclarationSyntax>)> nameSpaceClasses = new();
+            public List<(NamespaceDeclarationSyntax, IEnumerable<ClassDeclarationSyntax>, IEnumerable<ClassDeclarationSyntax>)> 
+                nameSpaceClasses = new();
 
             public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
             {
@@ -33,7 +35,9 @@ namespace DerivingReadShow
                     var classes = nameSpace.Members
                                            .OfType<ClassDeclarationSyntax>();
 
-                    var classesWithShowAttr = new List<ClassDeclarationSyntax>();
+                    var classesWithAttr = new List<ClassDeclarationSyntax>();
+
+                    var abstractClasses = new List<ClassDeclarationSyntax>();
 
                     foreach (var itClass in classes)
                     {
@@ -44,11 +48,21 @@ namespace DerivingReadShow
 
                         if (IsHaveShowAttr)
                         {
-                            classesWithShowAttr.Add(itClass);
+                            var isAbstract = itClass.Modifiers
+                                                    .Any(x => x.IsKind(SyntaxKind.AbstractKeyword));
+
+                            if (isAbstract)
+                            {
+                                abstractClasses.Add(itClass);
+                            }
+                            else
+                            {
+                                classesWithAttr.Add(itClass);
+                            }
                         }
                     }
 
-                    nameSpaceClasses.Add((nameSpace, classesWithShowAttr));
+                    nameSpaceClasses.Add((nameSpace, classesWithAttr, abstractClasses));
                 }
             }
         }

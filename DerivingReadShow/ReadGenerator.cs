@@ -31,7 +31,7 @@ namespace DerivingReadShow
 
             if (context.SyntaxReceiver is not SyntaxReceiver receiver) return;
 
-            foreach (var (nameSpace, classes) in receiver.nameSpaceClasses)
+            foreach (var (nameSpace, classes, abstractClasses) in receiver.nameSpaceClasses)
             {
                 var namespaceName = nameSpace.Name
                                              .ToString();

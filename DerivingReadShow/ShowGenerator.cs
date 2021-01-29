@@ -3,6 +3,7 @@ using System.Text;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace DerivingReadShow
 {
@@ -17,7 +18,7 @@ namespace DerivingReadShow
 
             if (context.SyntaxReceiver is not SyntaxReceiver receiver) return;
 
-            foreach (var (nameSpace, classes) in receiver.nameSpaceClasses)
+            foreach (var (nameSpace, classes, abstractClasses) in receiver.nameSpaceClasses)
             {
                 var namespaceName = nameSpace.Name
                                              .ToString();
@@ -47,6 +48,43 @@ namespace DerivingReadShow
                     codeBuilder.AppendLine(@"sb.Append("" { "");");
                     codeBuilder.AppendLine(@"var propName = "" "";");
                     codeBuilder.AppendLine($"var instance = new {namespaceName}.{className}();");
+
+                    ClassDeclarationSyntax abstractClass = null; 
+
+                    foreach (var c in abstractClasses)
+                    {
+                        var node = itClass.Identifier
+                                          .Parent
+                                          .DescendantNodes()
+                                          .Select(n => n.NormalizeWhitespace("", ""))
+                                          .Where(n => n.ToString() == c.Identifier.ToString())
+                                          .FirstOrDefault();
+
+                        if (node is not null)
+                        {
+                            abstractClass = c;
+
+                            break;
+                        }
+                    }
+
+                    if (abstractClass is not null)
+                    {
+                        foreach (var member in abstractClass.Members)
+                        {
+                            if (member is PropertyDeclarationSyntax prop)
+                            {
+                                var name = prop.Identifier
+                                               .ToString();
+
+                                codeBuilder.AppendLine($@"sb.Append($""{name}"");");
+                                codeBuilder.AppendLine(@"sb.Append("" = "");");
+                                codeBuilder.AppendLine(@$"sb.Append(obj.{name});");
+                                codeBuilder.AppendLine(@"sb.Append("", "");");
+                            }
+                        }
+                    }
+
                     foreach (var member in itClass.Members)
                     {
                         if (member is PropertyDeclarationSyntax prop)
@@ -54,8 +92,7 @@ namespace DerivingReadShow
                             var name = prop.Identifier
                                            .ToString();
                             
-                            codeBuilder.AppendLine(@$"propName = nameof(obj.{name});");
-                            codeBuilder.AppendLine("sb.Append(propName);");
+                            codeBuilder.AppendLine($@"sb.Append($""{name}"");");
                             codeBuilder.AppendLine(@"sb.Append("" = "");");
                             codeBuilder.AppendLine(@$"sb.Append(obj.{name});");
                             if (member == itClass.Members.Last())
