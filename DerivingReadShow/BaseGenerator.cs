@@ -66,5 +66,26 @@ namespace DerivingReadShow
                 }
             }
         }
+
+        protected ClassDeclarationSyntax GetParentClassDeclaration(ClassDeclarationSyntax classDeclaration, 
+            IEnumerable<ClassDeclarationSyntax> abstractClassesDeclaration)
+        {
+            foreach (var abstractClassDeclaration in abstractClassesDeclaration)
+            {
+                var node = classDeclaration.Identifier
+                                           .Parent
+                                           .DescendantNodes()
+                                           .Select(n => n.NormalizeWhitespace("", ""))
+                                           .Where(n => n.ToString() == abstractClassDeclaration.Identifier.ToString())
+                                           .FirstOrDefault();
+
+                if (node is not null)
+                {
+                    return abstractClassDeclaration;
+                }
+            }
+
+            return null;
+        }
     }
 }

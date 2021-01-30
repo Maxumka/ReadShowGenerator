@@ -6,12 +6,7 @@ using TextRead;
 
 namespace Test
 {
-    [Show]
-    public abstract class Person
-    {
-        public string SecondName { get; set; }
-    }
-
+    [Read]
     [Show]
     public abstract class Plant
     {
@@ -58,15 +53,11 @@ namespace Test
     {
         static void Main(string[] args)
         {
-            var treeIn = "Test.Tree {Name = bereza, Age = 12}";
+            var treeIn = "Test.Tree {Name = bereza, IsTree = true, Age = 12}";
 
             var tree = ReadTree.Read(treeIn);
 
-            var treeInst = new Tree { Name = "berezka", Age = 12, IsTree = true };
-
-            var shrunInst = new Shrub { Name = "kust", IsTree = false, MonthFlower = Month.April };
-
-            Console.WriteLine(shrunInst.Show());
+            Console.WriteLine(tree.Show());
         }
     }
 }

@@ -36,10 +36,10 @@ namespace DerivingReadShow
                 var namespaceName = nameSpace.Name
                                              .ToString();
 
-                foreach (var itClass in classes)
+                foreach (var classDeclaration in classes)
                 {
-                    var className = itClass.Identifier
-                                           .ToString();
+                    var className = classDeclaration.Identifier
+                                                    .ToString();
 
                     var fullClassName = $"{namespaceName}.{className}";
 
@@ -67,44 +67,22 @@ namespace DerivingReadShow
                     codeBuilder.AppendLine(@"dictProps.Add(nameAndValue.First(), nameAndValue.Last());");
                     codeBuilder.AppendLine("}");
 
-                    var countProps = 0;
+                    var countAllProperty = 0;
 
-                    foreach (var member in itClass.Members)
+                    var abstractClass = GetParentClassDeclaration(classDeclaration, abstractClasses);
+
+                    if (abstractClass is not null)
                     {
-                        if (member is PropertyDeclarationSyntax prop)
-                        {
-                            var name = prop.Identifier
-                                           .ToString();
-
-                            var type = prop.Type
-                                           .ToString();
-                            
-                            codeBuilder.AppendLine($@"if(!dictProps.TryGetValue($""{name}"", out var prop{name})) return null;");
-
-                            var propertySymbol = (IPropertySymbol)context.Compilation
-                                                                         .GetSemanticModel(nameSpace.SyntaxTree)
-                                                                         .GetDeclaredSymbol(prop);
-
-                            if (propertySymbol.Type.TypeKind == TypeKind.Enum)
-                            {
-                                codeBuilder.AppendLine($"if(!Enum.TryParse<{namespaceName}.{type}>(prop{name}, out var res{name})) return null;");
-                                codeBuilder.AppendLine($"instance.{name} = res{name};");                             
-                            }
-                            else if (type is "string")
-                            {
-                                codeBuilder.AppendLine($"instance.{name} = prop{name};");
-                            }
-                            else
-                            {
-                                codeBuilder.AppendLine($"if(!{type}.TryParse(prop{name}, out var res{name})) return null;");
-                                codeBuilder.AppendLine($"instance.{name} = res{name};");
-                            }
-
-                            countProps++;
-                        }
+                        var (parseCodeAbstractProperty, countAbstractProperty) = BuildPropertyParseCode(abstractClass, context, namespaceName);
+                        codeBuilder.AppendLine(parseCodeAbstractProperty);
+                        countAllProperty += countAbstractProperty;
                     }
 
-                    codeBuilder.AppendLine($"if(dictProps.Count != {countProps}) return null;");
+                    var (parseCode, countProperty) = BuildPropertyParseCode(classDeclaration, context, namespaceName);
+                    codeBuilder.AppendLine(parseCode);
+                    countAllProperty += countProperty;
+
+                    codeBuilder.AppendLine($"if(dictProps.Count != {countAllProperty}) return null;");
 
                     codeBuilder.AppendLine("return instance;");
                     codeBuilder.AppendLine("}");
@@ -116,5 +94,47 @@ namespace DerivingReadShow
 
             context.AddSource("Read.cs", codeBuilder.ToString());
         }
-    }
+
+        private (string parseCode, int countProperty) BuildPropertyParseCode(ClassDeclarationSyntax classDeclaration, 
+            GeneratorExecutionContext context, string nameSpaceName)
+        {
+            var codeBuilder = new StringBuilder();
+            var countProperty = 0;
+
+            foreach (var member in classDeclaration.Members)
+            {
+                if (member is PropertyDeclarationSyntax property)
+                {
+                    var nameProperty = property.Identifier;
+                    var typeProperty = property.Type;
+                    var propertySymbol = (IPropertySymbol)context.Compilation
+                                                                 .GetSemanticModel(classDeclaration.SyntaxTree)
+                                                                 .GetDeclaredSymbol(property);
+
+                    codeBuilder.AppendLine($@"if(!dictProps.TryGetValue($""{nameProperty}"", out var prop{nameProperty})) return null;");
+
+                    if (propertySymbol.Type.TypeKind is TypeKind.Enum)
+                    {
+                        codeBuilder.AppendLine($@"if(!Enum.TryParse<{nameSpaceName}.{typeProperty}>
+                                              (prop{nameProperty}, out var res{nameProperty})) return null;");
+
+                        codeBuilder.AppendLine($"instance.{nameProperty} = res{nameProperty};");
+                    }
+                    else if (typeProperty.ToString() is "string")
+                    {
+                        codeBuilder.AppendLine($"instance.{nameProperty} = prop{nameProperty};");
+                    }
+                    else
+                    {
+                        codeBuilder.AppendLine($"if(!{typeProperty}.TryParse(prop{nameProperty}, out var res{nameProperty})) return null;");
+                        codeBuilder.AppendLine($"instance.{nameProperty} = res{nameProperty};");
+                    }
+
+                    countProperty++;
+                }
+            }
+
+            return (codeBuilder.ToString(), countProperty);
+        }
+    } 
 }

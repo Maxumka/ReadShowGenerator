@@ -33,10 +33,10 @@ namespace DerivingReadShow
                 codeBuilder.AppendLine("public class ShowAttribute : Attribute { }");
                 #endregion BuildAttributeClass
 
-                foreach (var itClass in classes)
+                foreach (var classDeclaration in classes)
                 {
-                    var className = itClass.Identifier
-                                           .ToString();
+                    var className = classDeclaration.Identifier
+                                                    .ToString();
 
                     codeBuilder.AppendLine($"public static class Show{className}");
                     codeBuilder.AppendLine("{");
@@ -49,62 +49,17 @@ namespace DerivingReadShow
                     codeBuilder.AppendLine(@"var propName = "" "";");
                     codeBuilder.AppendLine($"var instance = new {namespaceName}.{className}();");
 
-                    ClassDeclarationSyntax abstractClass = null; 
-
-                    foreach (var c in abstractClasses)
-                    {
-                        var node = itClass.Identifier
-                                          .Parent
-                                          .DescendantNodes()
-                                          .Select(n => n.NormalizeWhitespace("", ""))
-                                          .Where(n => n.ToString() == c.Identifier.ToString())
-                                          .FirstOrDefault();
-
-                        if (node is not null)
-                        {
-                            abstractClass = c;
-
-                            break;
-                        }
-                    }
+                    ClassDeclarationSyntax abstractClass = GetParentClassDeclaration(classDeclaration, abstractClasses); 
 
                     if (abstractClass is not null)
                     {
-                        foreach (var member in abstractClass.Members)
-                        {
-                            if (member is PropertyDeclarationSyntax prop)
-                            {
-                                var name = prop.Identifier
-                                               .ToString();
-
-                                codeBuilder.AppendLine($@"sb.Append($""{name}"");");
-                                codeBuilder.AppendLine(@"sb.Append("" = "");");
-                                codeBuilder.AppendLine(@$"sb.Append(obj.{name});");
-                                codeBuilder.AppendLine(@"sb.Append("", "");");
-                            }
-                        }
+                        var convertCodeAbstractPropertyToString = BuildConvertPropertyToStringCode(abstractClass);
+                        codeBuilder.AppendLine(convertCodeAbstractPropertyToString);
                     }
 
-                    foreach (var member in itClass.Members)
-                    {
-                        if (member is PropertyDeclarationSyntax prop)
-                        {
-                            var name = prop.Identifier
-                                           .ToString();
-                            
-                            codeBuilder.AppendLine($@"sb.Append($""{name}"");");
-                            codeBuilder.AppendLine(@"sb.Append("" = "");");
-                            codeBuilder.AppendLine(@$"sb.Append(obj.{name});");
-                            if (member == itClass.Members.Last())
-                            {
-                                codeBuilder.AppendLine(@"sb.Append("" "");");
-                            }
-                            else
-                            {
-                                codeBuilder.AppendLine(@"sb.Append("", "");");
-                            }
-                        }
-                    }
+                    var convertCodePropertyToString = BuildConvertPropertyToStringCode(classDeclaration);
+                    codeBuilder.AppendLine(convertCodePropertyToString);
+
                     codeBuilder.AppendLine(@"sb.AppendLine(""} "");");
                     codeBuilder.AppendLine("return sb.ToString();");
                     codeBuilder.AppendLine("}");
@@ -115,6 +70,34 @@ namespace DerivingReadShow
             }
 
             context.AddSource("Show.cs", codeBuilder.ToString());
+        }
+
+        private string BuildConvertPropertyToStringCode(ClassDeclarationSyntax classDeclaration)
+        {
+            var codeBuilder = new StringBuilder();
+
+            foreach (var member in classDeclaration.Members)
+            {
+                if (member is PropertyDeclarationSyntax property)
+                {
+                    var nameProperty = property.Identifier
+                                   .ToString();
+
+                    codeBuilder.AppendLine($@"sb.Append($""{nameProperty}"");");
+                    codeBuilder.AppendLine(@"sb.Append("" = "");");
+                    codeBuilder.AppendLine(@$"sb.Append(obj.{nameProperty});");
+                    if (member == classDeclaration.Members.Last())
+                    {
+                        codeBuilder.AppendLine(@"sb.Append("" "");");
+                    }
+                    else
+                    {
+                        codeBuilder.AppendLine(@"sb.Append("", "");");
+                    }
+                }
+            }
+
+            return codeBuilder.ToString();
         }
     }
 }
