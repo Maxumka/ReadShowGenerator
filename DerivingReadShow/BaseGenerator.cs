@@ -1,8 +1,10 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using ReadShowGenerator;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace DerivingReadShow
@@ -14,7 +16,10 @@ namespace DerivingReadShow
 
         public abstract void Execute(GeneratorExecutionContext context);
 
-        public void Initialize(GeneratorInitializationContext context) => context.RegisterForSyntaxNotifications(() => new SyntaxReceiver(this));
+        public void Initialize(GeneratorInitializationContext context)
+        {
+            context.RegisterForSyntaxNotifications(() => new SyntaxReceiver(this));
+        }
 
         protected class SyntaxReceiver : ISyntaxReceiver
         {
@@ -25,67 +30,64 @@ namespace DerivingReadShow
                 nameAttribute = generator.NameAttribute;
             }
 
-            public List<(NamespaceDeclarationSyntax, IEnumerable<ClassDeclarationSyntax>, IEnumerable<ClassDeclarationSyntax>)> 
-                nameSpaceClasses = new();
+            public List<ClassInfo> classesInfo = new();
 
             public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
             {
                 if (syntaxNode is NamespaceDeclarationSyntax nameSpace)
                 {
-                    var classes = nameSpace.Members
-                                           .OfType<ClassDeclarationSyntax>();
+                    var classesDeclaration = nameSpace.Members
+                                                      .OfType<ClassDeclarationSyntax>();
 
-                    var classesWithAttr = new List<ClassDeclarationSyntax>();
-
-                    var abstractClasses = new List<ClassDeclarationSyntax>();
-
-                    foreach (var itClass in classes)
+                    foreach (var classDeclaration in classesDeclaration)
                     {
-                        var IsHaveShowAttr = itClass.DescendantNodes()
-                                                    .OfType<AttributeSyntax>()
-                                                    .Select(c => c.ToString())
-                                                    .Any(c => c == nameAttribute);
+                        var IsHaveAttribute = classDeclaration.DescendantNodes()
+                                                              .OfType<AttributeSyntax>()
+                                                              .Any(c => c.ToString() == nameAttribute);
 
-                        if (IsHaveShowAttr)
+                        if (!IsHaveAttribute) continue;
+
+                        var propertiesDeclaration = new List<PropertyDeclarationSyntax>();
+
+                        var maybeParentClass = GetParentClass(nameSpace, classDeclaration);
+
+                        if (maybeParentClass is not null)
                         {
-                            var isAbstract = itClass.Modifiers
-                                                    .Any(x => x.IsKind(SyntaxKind.AbstractKeyword));
-
-                            if (isAbstract)
-                            {
-                                abstractClasses.Add(itClass);
-                            }
-                            else
-                            {
-                                classesWithAttr.Add(itClass);
-                            }
+                            propertiesDeclaration.AddRange(GetProperties(maybeParentClass));
                         }
-                    }
 
-                    nameSpaceClasses.Add((nameSpace, classesWithAttr, abstractClasses));
+                        propertiesDeclaration.AddRange(GetProperties(classDeclaration));
+
+                        var classInfo = new ClassInfo
+                        {
+                            NameSpace = nameSpace.Name.ToString(),
+                            Name = classDeclaration.Identifier.ValueText,
+                            Properties = propertiesDeclaration
+                        };
+
+                        classesInfo.Add(classInfo);
+                    }                    
                 }
             }
-        }
 
-        protected ClassDeclarationSyntax GetParentClassDeclaration(ClassDeclarationSyntax classDeclaration, 
-            IEnumerable<ClassDeclarationSyntax> abstractClassesDeclaration)
-        {
-            foreach (var abstractClassDeclaration in abstractClassesDeclaration)
+            private ClassDeclarationSyntax GetParentClass(NamespaceDeclarationSyntax namespaceDeclaration, ClassDeclarationSyntax classDeclaration)
             {
-                var node = classDeclaration.Identifier
-                                           .Parent
-                                           .DescendantNodes()
-                                           .Select(n => n.NormalizeWhitespace("", ""))
-                                           .Where(n => n.ToString() == abstractClassDeclaration.Identifier.ToString())
-                                           .FirstOrDefault();
+                var maybeBaseType = classDeclaration.DescendantNodes()
+                                                    .Where(c => c.Kind() == SyntaxKind.SimpleBaseType)
+                                                    .FirstOrDefault();
 
-                if (node is not null)
-                {
-                    return abstractClassDeclaration;
-                }
+                if (maybeBaseType is not SimpleBaseTypeSyntax simpleBaseType) return null;
+
+                var maybeParentClass = namespaceDeclaration.DescendantNodes()
+                                                           .OfType<ClassDeclarationSyntax>()
+                                                           .Where(n => n.Identifier.ValueText == maybeBaseType.ToString())
+                                                           .FirstOrDefault();
+
+                return maybeParentClass;
             }
 
-            return null;
+            private IEnumerable<PropertyDeclarationSyntax> GetProperties(ClassDeclarationSyntax classDeclaration)
+                => classDeclaration.Members.OfType<PropertyDeclarationSyntax>(); 
         }
     }
 }

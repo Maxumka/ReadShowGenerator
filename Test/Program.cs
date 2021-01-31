@@ -1,63 +1,44 @@
 ﻿using System;
-using Ext;
-using System.Linq;
-using System.Collections.Generic;
+using TextShow;
 using TextRead;
 
 namespace Test
 {
+    public abstract class Person
+    {
+        public string Name { get; set; }
+
+        public int Age { get; set; }
+    }
+
     [Read]
     [Show]
+    public sealed class Student : Person
+    {
+        public int Course { get; set; }
+    }
+
     public abstract class Plant
     {
         public string Name { get; set; }
 
-        public bool IsTree { get; set; }
+        public int Age { get; set; }
     }
 
     [Read]
     [Show]
     public sealed class Tree : Plant
     {
-        public int Age { get; set; }
-    }
-
-    [Show]
-    public sealed class Shrub : Plant
-    {
-        public Month MonthFlower { get; set; }
-    }
-
-    public sealed class Mushroom : Plant
-    {
-        public bool IsEdible { get; set; }
-    }
-
-    public enum Month
-    {
-        Janurary,
-        February,
-        March,
-        April,
-        May,
-        June,
-        Jule,
-        Augast,
-        September,
-        October,
-        November,
-        December
+        public bool IsTree { get; set; }
     }
 
     public class Program
     {
         static void Main(string[] args)
         {
-            var treeIn = "Test.Tree {Name = bereza, IsTree = true, Age = 12}";
+            var treeText = "Test.Tree { Name = berezka, Age = 12, IsTree = true }";
 
-            var tree = ReadTree.Read(treeIn);
-
-            Console.WriteLine(tree.Show());
+            Console.WriteLine(ReadTree.Read(treeText).Show());
         }
     }
 }
