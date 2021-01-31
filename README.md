@@ -20,3 +20,10 @@ Also you can add attribute Read in SomeClass and generator will create static cl
 var someInstanceText = "Text.SomeClass { SomePropertyOne = prop1, SomePropertyTwo = prop2 }";
 var someInstance = ReadSomeClass.Read(someInstanceText);
 ```
+## Restrictions for the class 
+First, it must be a class, not a record. 
+Second, the class must have a default constructor. 
+That's all.
+## What it looks like in visual studio 
+![SourceCode](https://drive.google.com/file/d/1SfcDr0CkFuidqdjMLm0hM1-PoqvMCvRT/view?usp=sharing)
+![Result](https://drive.google.com/file/d/1w3Oxuf1i8KwrqmLnYtW9aI7B1WTeNrt5/view?usp=sharing)
